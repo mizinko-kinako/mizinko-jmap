@@ -1,0 +1,49 @@
+substitutions:
+  _REGION: 'asia-northeast1'
+
+steps:
+  # ステップ1: 依存関係のインストール
+  - name: 'python:3.9-slim'
+    id: 'Install Dependencies'
+    entrypoint: 'pip'
+    args: ['install', '-r', 'requirements.txt']
+
+  # ステップ2: 単体テストの実行
+  - name: 'python:3.9-slim'
+    id: 'Run Tests'
+    entrypoint: 'pytest'
+    args: ['tests/']
+    waitFor: ['Install Dependencies']
+
+  # ステップ3: コンテナイメージのビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/jmap-app:$COMMIT_SHA', '.']
+    waitFor: ['Run Tests']
+
+  # ステップ4: コンテナイメージをGCRにプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push'
+    args: ['push', 'gcr.io/$PROJECT_ID/jmap-app:$COMMIT_SHA']
+    waitFor: ['Build']
+
+  # ステップ5: Cloud Runへデプロイ
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'jmap-app' # Cloud Run サービス名
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/jmap-app:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+    waitFor: ['Push']
+
+# ビルドされたイメージ
+images:
+  - 'gcr.io/$PROJECT_ID/jmap-app:$COMMIT_SHA'
