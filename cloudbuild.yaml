@@ -2,17 +2,23 @@ substitutions:
   _REGION: 'asia-northeast1'
 
 steps:
-  # ステップ1: 依存関係のインストール
-  - name: 'python:3.9-slim'
+  # ステップ1: 依存関係のインストール (pipアップグレードを追加)
+  - name: 'python:3.12-slim'
     id: 'Install Dependencies'
-    entrypoint: 'pip'
-    args: ['install', '-r', 'requirements.txt']
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - | 
+        pip install --upgrade pip setuptools && \
+        pip install -r requirements.txt --target /workspace/local_lib
 
-  # ステップ2: 単体テストの実行
-  - name: 'python:3.9-slim'
+  # ステップ2: 単体テストの実行 (インストールしたpytestを使用)
+  - name: 'python:3.12-slim'
     id: 'Run Tests'
-    entrypoint: 'pytest'
-    args: ['tests/']
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - 'PYTHONPATH=/workspace:/workspace/local_lib /workspace/local_lib/bin/pytest tests/'
     waitFor: ['Install Dependencies']
 
   # ステップ3: コンテナイメージのビルド
@@ -42,6 +48,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--set-env-vars=GCP_PROJECT=$PROJECT_ID'
     waitFor: ['Push']
 
 # ビルドされたイメージ

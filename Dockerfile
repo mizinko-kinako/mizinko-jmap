@@ -1,6 +1,6 @@
 # 1. ベースイメージの選択
 # 公式のPythonイメージをベースとして使用します
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # 2. 環境変数の設定
 # Pythonのログがバッファリングされず、すぐに出力されるようにします
@@ -14,6 +14,7 @@ WORKDIR /app
 # 4. 依存関係のインストール
 # requirements.txtを先にコピーし、キャッシュを活用してビルドを高速化します
 COPY requirements.txt ./
+RUN pip install --no-cache-dir --upgrade pip setuptools
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 5. アプリケーションコードと起動スクリプトのコピー

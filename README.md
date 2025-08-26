@@ -47,7 +47,14 @@ printf "YOUR_APP_ID_HERE" | gcloud secrets create jmap-app-id --data-file=-
 printf "YOUR_BUCKET_NAME_HERE" | gcloud secrets create jmap-gcs-bucket-name --data-file=-
 ```
 
-#### 3. Cloud RunとCloud Buildのサービスアカウントに権限を付与
+#### 3. Google Cloud Storageバケットを作成
+アプリケーションがデータを保存するためのGCSバケットを作成します。バケット名は**全世界で一意**にする必要があります。
+```bash
+# YOUR_BUCKET_NAME_HERE を実際のバケット名に置き換える
+gcloud storage buckets create gs://YOUR_BUCKET_NAME_HERE --location=asia-northeast1
+```
+
+#### 4. Cloud RunとCloud Buildのサービスアカウントに権限を付与
 
 ```bash
 # プロジェクト番号とプロジェクトIDを取得
@@ -62,6 +69,9 @@ BUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
 # Cloud RunのSAにSecret Managerへのアクセス権を付与
 gcloud secrets add-iam-policy-binding jmap-app-id --member="serviceAccount:${RUN_SA}" --role="roles/secretmanager.secretAccessor"
 gcloud secrets add-iam-policy-binding jmap-gcs-bucket-name --member="serviceAccount:${RUN_SA}" --role="roles/secretmanager.secretAccessor"
+
+# Cloud RunのSAにGCSバケットへの書き込み権限を付与 (YOUR_BUCKET_NAME_HERE を実際のバケット名に置き換える)
+gcloud storage buckets add-iam-policy-binding gs://YOUR_BUCKET_NAME_HERE --member="serviceAccount:${RUN_SA}" --role="roles/storage.objectAdmin"
 
 # Cloud BuildのSAにCloud Runへのデプロイ権限と、サービスアカウントのなりすまし権限を付与
 gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${BUILD_SA}" --role="roles/run.admin"
