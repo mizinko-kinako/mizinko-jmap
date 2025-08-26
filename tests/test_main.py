@@ -16,8 +16,8 @@ mock_estat_handler = MagicMock()
 mock_storage = MagicMock()
 
 # sys.modulesに登録して、後続のimportでモックが使われるようにする
-sys.modules["src.config"] = mock_config
-sys.modules["src.estat_handler"] = mock_estat_handler
+sys.modules["config"] = mock_config
+sys.modules["estat_handler"] = mock_estat_handler
 sys.modules["google.cloud.storage"] = mock_storage
 
 # モックの設定後にアプリケーション本体をインポート

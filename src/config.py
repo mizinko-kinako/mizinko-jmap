@@ -1,18 +1,27 @@
 from google.cloud import secretmanager
 import os
+from dotenv import load_dotenv
+
+# .envファイルから環境変数を読み込む（ローカル開発用）
+load_dotenv()
 
 # Secret Managerクライアントを初期化
 client = secretmanager.SecretManagerServiceClient()
 
-# GCPプロジェクトIDは、Cloud Run環境では自動的に設定される環境変数から取得
+# GCPプロジェクトIDを取得
+# 1. Cloud Run環境で自動的に設定される環境変数 "GCP_PROJECT" を優先
+# 2. 1がない場合、ローカルの.envファイルなどに記載された "GCP_PROJECT" を使用
 PROJECT_ID = os.getenv("GCP_PROJECT")
 
 def get_secret(secret_id: str, version_id: str = "latest") -> str:
     """Google Secret Managerから最新のシークレットを取得する"""
+    # PROJECT_IDが取得できているかここで改めて確認
     if not PROJECT_ID:
-        # ローカル環境などでGCP_PROJECTが設定されていない場合のフォールバック
-        # gcloud config get-value project コマンドで取得するなど、代替手段を検討
-        raise ValueError("GCP_PROJECT environment variable is not set.")
+        # .envファイルにもGCP_PROJECTが設定されていない場合
+        raise ValueError(
+            "GCP_PROJECT environment variable is not set. "
+            "Please set it in your OS environment or in a .env file for local development."
+        )
 
     # シークレットの完全なリソース名を構築
     name = f"projects/{PROJECT_ID}/secrets/{secret_id}/versions/{version_id}"

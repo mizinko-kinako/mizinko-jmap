@@ -2,24 +2,37 @@ import requests
 import pandas as pd
 import io
 import json
+import datetime
 
-# 調査対象の統計データIDと年リスト
+# 調査対象の統計データID
 STATS_DATA_ID = "0000010101"
-YEAR_LIST = ["1995", "2000", "2005", "2010", "2015", "2020"]
 
 def fetch_and_process_population_data(app_id: str):
     """
     e-Stat APIから総人口データを取得し、指定されたJSON構造に加工する。
+    データが存在しない年はスキップする。
     Args:
         app_id (str): e-Stat APIのアプリケーションID。
     Returns:
         dict: 年度ごと、都道府県別の総人口を格納した辞書。
     """
+    # --- 動的に取得対象年の候補リストを生成 ---
+    start_year = 1995
+    current_year = datetime.datetime.now().year
+    # 現在の年以下の直近の国勢調査年を計算
+    latest_possible_year = current_year - (current_year % 5)
+    
+    candidate_years = [
+        str(year) for year in range(start_year, latest_possible_year + 1)
+        if year % 5 == 0
+    ]
+    print(f"取得試行対象年リスト: {candidate_years}")
+
     base_url = "https://api.e-stat.go.jp/rest/3.0/app/getSimpleStatsData"
     all_data_df = pd.DataFrame()
 
     print("e-Statからデータの取得を開始します...")
-    for year in YEAR_LIST:
+    for year in candidate_years:
         print(f"{year}年のデータを取得中...")
         params = {
             "appId": app_id,
@@ -36,6 +49,7 @@ def fetch_and_process_population_data(app_id: str):
             response_text = response.text
             lines = response_text.splitlines()
 
+            # ヘッダー行を特定
             header_row_index = -1
             for i, line in enumerate(lines):
                 if '"tab_code"' in line:
@@ -43,19 +57,28 @@ def fetch_and_process_population_data(app_id: str):
                     break
             
             if header_row_index == -1:
-                print(f"エラー: {year}年のデータからヘッダー行が見つかりませんでした。")
+                print(f"情報: {year}年のデータにヘッダーが見つかりませんでした。スキップします。")
+                continue
+
+            # ヘッダー行以降にデータ行が存在するか確認
+            if len(lines) <= header_row_index + 1 or not lines[header_row_index + 1].strip():
+                print(f"情報: {year}年のデータは空です。スキップします。")
                 continue
 
             csv_data = io.StringIO('\n'.join(lines[header_row_index:]))
             df = pd.read_csv(csv_data, dtype={'area_code': str, 'cat01_code': str})
             
+            if df.empty:
+                print(f"情報: {year}年のデータは空です。スキップします。")
+                continue
+
             df['survey_year'] = year
             all_data_df = pd.concat([all_data_df, df], ignore_index=True)
             print(f"{year}年のデータを取得完了。")
 
         except requests.exceptions.RequestException as e:
-            print(f"エラーが発生しました: {e}")
-            return None
+            print(f"情報: {year}年のデータ取得でエラーが発生しました。まだ公開されていない可能性があります。スキップします。")
+            continue
 
     if all_data_df.empty:
         print("取得できるデータがありませんでした。")

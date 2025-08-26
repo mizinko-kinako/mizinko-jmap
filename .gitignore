@@ -1,13 +1,40 @@
+# Byte-code / cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+jmap/
+
 # Environment variables
 .env
+*.env
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-jmap/
+# Databases
+*.sqlite3
+
+# Logs
+*.log
+
+# Test / coverage reports
+.coverage
+.coverage.*
+htmlcov/
 
 # IDE / Editor
 .vscode/
 .idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
